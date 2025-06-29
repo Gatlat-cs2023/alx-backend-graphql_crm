@@ -1,15 +1,40 @@
 import graphene
 
+from graphene_django import DjangoObjectType, DjangoFilterConnectionField
+from django.db.models import Q
+from .models import Customer, Product, Order
+from .filters import CustomerFilter, ProductFilter, OrderFilter
 
-import graphene
-from graphene_django import DjangoObjectType
 from django.db import transaction
 from .models import Customer, Product, Order
 from django.core.exceptions import ValidationError
 from graphql import GraphQLError
 
 class Query(graphene.ObjectType):
-    hello = graphene.String(default_value="Hello, GraphQL!")
+    all_customers = DjangoFilterConnectionField(
+        CustomerType,
+        filterset_class=CustomerFilter,
+        filter=CustomerFilterInput(required=False)
+    )
+    all_products = DjangoFilterConnectionField(
+        ProductType,
+        filterset_class=ProductFilter,
+        filter=ProductFilterInput(required=False)
+    )
+    all_orders = DjangoFilterConnectionField(
+        OrderType,
+        filterset_class=OrderFilter,
+        filter=OrderFilterInput(required=False)
+    )
+
+    def resolve_all_customers(self, info, **kwargs):
+        return Customer.objects.all()
+
+    def resolve_all_products(self, info, **kwargs):
+        return Product.objects.all()
+
+    def resolve_all_orders(self, info, **kwargs):
+        return Order.objects.all()
 
 schema = graphene.Schema(query=Query)
 
@@ -67,6 +92,30 @@ class CreateCustomer(graphene.Mutation):
             if 'phone' in e.message_dict:
                 raise GraphQLError("Invalid phone number format. Use '+1234567890' or '123-456-7890'")
             raise GraphQLError(str(e))
+
+class CustomerFilterInput(graphene.InputObjectType):
+    name_icontains = graphene.String()
+    email_icontains = graphene.String()
+    created_at_gte = graphene.Date()
+    created_at_lte = graphene.Date()
+    phone_pattern = graphene.String()
+
+class ProductFilterInput(graphene.InputObjectType):
+    name_icontains = graphene.String()
+    price_gte = graphene.Float()
+    price_lte = graphene.Float()
+    stock_gte = graphene.Int()
+    stock_lte = graphene.Int()
+    low_stock = graphene.Boolean()
+
+class OrderFilterInput(graphene.InputObjectType):
+    total_amount_gte = graphene.Float()
+    total_amount_lte = graphene.Float()
+    order_date_gte = graphene.Date()
+    order_date_lte = graphene.Date()
+    customer_name = graphene.String()
+    product_name = graphene.String()
+    product_id = graphene.Int()
 
 class BulkCreateCustomers(graphene.Mutation):
     class Arguments:
