@@ -1,0 +1,4 @@
+celery==5.3.6
+redis==4.6.0
+django-celery-beat==2.5.0
+graphene-django==3.1.5

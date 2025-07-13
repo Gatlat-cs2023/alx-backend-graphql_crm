@@ -204,7 +204,6 @@ class Mutation(graphene.ObjectType):
     create_order = CreateOrder.Field()
     update_low_stock_products = UpdateLowStockProducts.Field()
 
-# ------------------------
-# Schema
-# ------------------------
 schema = graphene.Schema(query=Query, mutation=Mutation)
+
+
