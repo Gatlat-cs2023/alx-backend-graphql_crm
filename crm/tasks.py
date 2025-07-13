@@ -1,41 +1,31 @@
-import logging
+# crm/tasks.py
 from celery import shared_task
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 from datetime import datetime
-from graphene_django.utils.testing import graphql_query
-
-logger = logging.getLogger(__name__)
 
 @shared_task
 def generate_crm_report():
-    # GraphQL query to fetch CRM data
-    query = """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    transport = RequestsHTTPTransport(url='http://localhost:8000/graphql', verify=True, retries=3)
+    client = Client(transport=transport, fetch_schema_from_transport=True)
+
+    query = gql("""
     query {
-        totalCustomers
-        totalOrders
-        totalRevenue
+        customers { id }
+        orders { id totalAmount }
     }
-    """
-    
+    """)
+
     try:
-        # Execute GraphQL query
-        response = graphql_query(query)
-        data = response.json()['data']
-        
-        # Extract metrics
-        customers = data.get('totalCustomers', 0)
-        orders = data.get('totalOrders', 0)
-        revenue = data.get('totalRevenue', 0)
-        
-        # Format log message
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        log_message = f"{timestamp} - Report: {customers} customers, {orders} orders, {revenue} revenue\n"
-        
-        # Write to log file
-        with open('/tmp/crm_report_log.txt', 'a') as f:
-            f.write(log_message)
-            
-        logger.info("Successfully generated CRM report")
-        
+        result = client.execute(query)
+        total_customers = len(result["customers"])
+        total_orders = len(result["orders"])
+        total_revenue = sum(float(order["totalAmount"]) for order in result["orders"])
+
+        with open("/tmp/crm_report_log.txt", "a") as f:
+            f.write(f"{now} - Report: {total_customers} customers, {total_orders} orders, ${total_revenue:.2f} revenue\n")
+
     except Exception as e:
-        logger.error(f"Failed to generate CRM report: {str(e)}")
-        raise
+        with open("/tmp/crm_report_log.txt", "a") as f:
+            f.write(f"{now} - ERROR: {e}\n")
