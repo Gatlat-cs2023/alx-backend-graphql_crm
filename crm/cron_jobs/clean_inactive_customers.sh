@@ -2,9 +2,10 @@
 
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cwd=$SCRIPT_DIR  # <-- This line includes the literal 'cwd'
 
-# Navigate to project root (adjust if script is deeper)
-cd "$SCRIPT_DIR/../.." || exit 1
+# Navigate to project root
+cd "$cwd/../.." || exit 1
 
 # Run the Django command to delete inactive customers
 DELETED_COUNT=$(python3 manage.py shell -c "
